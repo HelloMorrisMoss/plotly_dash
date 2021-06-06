@@ -74,7 +74,7 @@ layout_list += [html.Div(id='bubble_size_form_label',
                          title='Input a size multiplier for the marker representing proportional length.',
                          children='Marker size multiplier, representing proportional length'),
                 dcc.Input(id='mark_size_form',
-                          value=0)]
+                          value=50)]
 
 
 coater_num_list = (1, 2, 3, 4, 5)
@@ -87,20 +87,38 @@ layout_list += [html.Div(id='coater_selector_label',
                               value=coater_num_list
                               )]
 
+shift_num_list = (1, 2, 3)
+shift_checklist_list = [{'label': f'{num}', 'value': num} for num in shift_num_list]
+layout_list += [html.Div(id='shift_selector_label',
+                         title='Select shift numbers to display.',
+                         children='Select shift numbers to display.'),
+                dcc.Checklist(id='shift_selector_checklist',
+                              options=shift_checklist_list,
+                              value=shift_num_list
+                              )]
+
 app.layout = html.Div(layout_list)
+
+hvr_template = '''%{customdata[total_len]}'''.replace('total_len', str(df.columns.get_loc('total_length')))
+# hvr_template = '''%{x},%{y}'''
 
 
 @app.callback(Output('graph', 'figure'),
               [Input('tc_picker', 'value'),
                Input('mark_size_form', 'value'),
-               Input('coater_selector_checklist', 'value')])
-def update_figure(selected_tc, mark_size_multiplier, selected_coaters):
+               Input('coater_selector_checklist', 'value'),
+               Input('shift_selector_checklist', 'value')])
+def update_figure(selected_tc, mark_size_multiplier, selected_coaters, selected_shifts):
     selected_coaters = tuple(int(n) for n in selected_coaters)
-    filtered_df = df[df['tabcode'] == selected_tc & df['coater_num'].isin(selected_coaters)]
 
-    length_max = filtered_df['total_length'].max()
+    # filter the data based on inputs
+    filtered_df = df[df['tabcode'] == int(selected_tc)]
+    filtered_df = filtered_df[filtered_df['coater_num'].isin(selected_coaters)]
+    filtered_df = filtered_df[filtered_df['shift'].isin(selected_shifts)]
+
+    # length_max = filtered_df['total_length'].max()
     length_min = filtered_df['total_length'].min()
-    proportion = (filtered_df['total_length'] - length_min) / 1000 * int(mark_size_multiplier)
+    proportion = (filtered_df['total_length'] - length_min) * int(mark_size_multiplier) / 1000
 
     traces = []
     print(selected_tc)
@@ -116,12 +134,18 @@ def update_figure(selected_tc, mark_size_multiplier, selected_coaters):
             opacity=0.7,
             # marker={'size': 15},
             marker_size=proportion,
-            name='{tc}-{}-{}'.format(*grp_mi, tc=selected_tc)
+            name='{tc}-{}-{}'.format(*grp_mi, tc=selected_tc),
+            hovertemplate=hvr_template,
+            customdata=grp_df
+            # ,
+            # hover_data=['total_length']
         ))
 
+
     return {'data': traces, 'layout': go.Layout(title='My Plot',
-                                                xaxis={'title': 'Week of Year', 'type': 'log'},
-                                                yaxis={'title': 'Overall met target speed pct'}
+                                                xaxis={'title': 'Week of Year', 'type': 'linear'},
+                                                yaxis={'title': 'Overall met target speed pct', 'type': 'linear'},
+                                                template='plotly_dark'
                                                 )
             }
 
