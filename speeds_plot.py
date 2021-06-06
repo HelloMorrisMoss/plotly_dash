@@ -25,27 +25,24 @@ from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 import pandas as pd
 
-
+# display options for printing out pandas columns wide without ellipses or continuations
 pd.set_option('display.max_columns', None)
 pd.set_option('max_columns', None)
 pd.set_option('display.width', None)
 
+# dash instance
 app = dash.Dash()
 
+# load the data
 # df = pd.read_csv('https://github.com/Pierian-Data/Plotly-Dashboards-with-Dash/raw/master/Data/mpg.csv')
 # df = pd.read_excel(r'C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-05-23 percent of running speed length meeting target speed e097f566-e009-427d-8202-30ea065080ac.xlsx',
 #                    sheet_name='2021-01-03 to 2021-05-23 pe (2)')
 df = pd.read_csv(r'C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-05-23 percent of running speed length meeting target speed e097f566-e009-427d-8202-30ea065080ac.csv')
 
 # df['total_len_tcs'] = df.groupby(['tabcode', 'coater_num', 'shift', 'week'])['total_length'].transform('sum')
-
-df = df[df['total_length'] > 0]
-df = df.sort_values(['week'])
-
-# tcode_bools = df['tabcode'] == '91688'
-# cnum_bools = df['coater_num'] == 4
-# df = df[cnum_bools]
-# df = df[tcode_bools & cnum_bools]
+# make sure the data has things the way we want
+df = df[df['total_length'] > 0]  # no 0 length
+df = df.sort_values(['week'])  # ordered hy length
 
 features = df.columns
 
@@ -65,6 +62,9 @@ app.layout = html.Div([
                  options=tc_options,
                  value=df['tabcode'].min(),
                  ),
+    html.Div(id='bubble_size_form_label',
+             title='Input a size multiplier for the marker representing proportional length.',
+             children='Marker size multiplier, representing proportional length'),
     dcc.Input(id='mark_size_form',
               value=0)
 ])
