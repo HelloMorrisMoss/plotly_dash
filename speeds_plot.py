@@ -37,6 +37,10 @@ app = dash.Dash()
 #                    sheet_name='2021-01-03 to 2021-05-23 pe (2)')
 df = pd.read_csv(r'C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-05-23 percent of running speed length meeting target speed e097f566-e009-427d-8202-30ea065080ac.csv')
 
+# df['total_len_tcs'] = df.groupby(['tabcode', 'coater_num', 'shift', 'week'])['total_length'].transform('sum')
+
+df = df[df['total_length'] > 0]
+
 # tcode_bools = df['tabcode'] == '91688'
 # cnum_bools = df['coater_num'] == 4
 # df = df[cnum_bools]
@@ -65,6 +69,7 @@ app.layout = html.Div([
               [Input('tc_picker', 'value')])
 def update_figure(selected_tc):
     filtered_df = df[df['tabcode'] == selected_tc]
+    proportion = (filtered_df['total_length'] / filtered_df['total_length'].max()) * 100
 
     traces = []
     print(selected_tc)
@@ -77,10 +82,12 @@ def update_figure(selected_tc):
         # df_this_shift = df_by_shift.groupby(['week'])['overall_met_pct'].mean().reset_index()
         traces.append(go.Scatter(
             x=grp_df['week'],
-            y=grp_df['overall_met_pct'],
+            y=grp_df['pct_met_target'],
             mode='lines+markers',
+            # mode='markers',
             opacity=0.7,
-            marker={'size': 15},
+            # marker={'size': 15},
+            marker_size=proportion,
             # name=f'{selected_tc}-{cnum}-{shift}'
             name='{tc}-{}-{}'.format(*grp_mi, tc=selected_tc)
         ))
