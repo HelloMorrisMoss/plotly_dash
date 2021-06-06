@@ -40,6 +40,7 @@ df = pd.read_csv(r'C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-
 # df['total_len_tcs'] = df.groupby(['tabcode', 'coater_num', 'shift', 'week'])['total_length'].transform('sum')
 
 df = df[df['total_length'] > 0]
+df = df.sort_values(['week'])
 
 # tcode_bools = df['tabcode'] == '91688'
 # cnum_bools = df['coater_num'] == 4
@@ -59,17 +60,26 @@ for tc in df['tabcode'].unique():
 
 app.layout = html.Div([
     dcc.Graph(id='graph'),
+    html.Div(id='tc_label', title='Select a Tabcode to display from the dropdown menu.', children='Tabcode'),
     dcc.Dropdown(id='tc_picker',
                  options=tc_options,
-                 value=df['tabcode'].min())
+                 value=df['tabcode'].min(),
+                 ),
+    dcc.Input(id='mark_size_form',
+              value=0)
 ])
 
 
 @app.callback(Output('graph', 'figure'),
-              [Input('tc_picker', 'value')])
-def update_figure(selected_tc):
+              [Input('tc_picker', 'value'),
+               Input('mark_size_form', 'value')])
+def update_figure(selected_tc, mark_size_multiplier):
     filtered_df = df[df['tabcode'] == selected_tc]
-    proportion = (filtered_df['total_length'] / filtered_df['total_length'].max()) * 100
+
+    length_max = filtered_df['total_length'].max()
+    length_min = filtered_df['total_length'].min()
+    # proportion = (filtered_df['total_length'] / length_max) * length_max / length_min
+    proportion = (filtered_df['total_length'] - length_min) / length_max * int(mark_size_multiplier)
 
     traces = []
     print(selected_tc)
