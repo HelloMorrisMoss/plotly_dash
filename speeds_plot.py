@@ -64,7 +64,8 @@ layout_list = []
 # ----------------------------------------
 
 # the graph
-layout_list += [dcc.Graph(id='graph')]
+# layout_list += [dcc.Graph(id='graph')]
+graph_list = [dcc.Graph(id='graph')]
 
 
 # the met target speed % checklist
@@ -130,9 +131,10 @@ layout_list += [html.Div(id='shift_selector_label',
                               )]
 
 # add everything to the layout
-app.layout = html.Div([dbc.Row([dbc.Col([comp], width=True)]) for comp in layout_list])
+app.layout = html.Div(graph_list + [dbc.Col([dbc.Row([dbc.Col([comp], width=True)]) for comp in layout_list], width=4)])
 
-hvr_template = '''%{hovertext} - %{customdata[total_len]m}'''.replace('total_len', str(df.columns.get_loc('display_length')))
+totl_len_str = str(df.columns.get_loc('display_length'))
+hvr_template = '''%{hovertext} - %{customdata[total_len]m}'''.replace('total_len', totl_len_str)
 # hvr_template = '''%{x},%{y}'''
 
 
