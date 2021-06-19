@@ -52,7 +52,8 @@ features = df.columns
 css_sheet = dbc.themes.MATERIA
 # app = dash.Dash(__name__, external_stylesheets=[css_sheet])  # this isn't working for me, needed a local copy
 app = dash.Dash(__name__,
-                meta_tags=[{'name': 'viewport', 'content': 'width=device-width, initial-scale=1.0, maximum-scale=1.2, minimum-scale=0.5' }])
+                meta_tags=[{'name': 'viewport',
+                            'content': 'width=device-width, initial-scale=1.0, maximum-scale=1.2, minimum-scale=0.5'}])
 shared_template = 'plotly_dark+presentation+xgridoff'
 # shared_template = 'presentation+xgridoff'
 
@@ -63,10 +64,10 @@ layout_list = []
 # ----------------------------------------
 
 # the graph
-# layout_list += [dcc.Graph(id='graph')]
 layout_list += [dcc.Graph(id='graph')]
 
 
+# the met target speed % checklist
 def just_ints(the_string):
     """Returns ony the digits from a string as an """
     # print(the_string)
@@ -106,6 +107,7 @@ layout_list += [html.Div(id='bubble_size_form_label',
                           value=50)]
 
 
+# coater number selector
 coater_num_list = (1, 2, 3, 4, 5)
 coater_checklist_list = [{'label': f'{num}', 'value': num} for num in coater_num_list]
 layout_list += [html.Div(id='coater_selector_label',
@@ -116,6 +118,7 @@ layout_list += [html.Div(id='coater_selector_label',
                               value=coater_num_list
                               )]
 
+# shift number checklist
 shift_num_list = (1, 2, 3)
 shift_checklist_list = [{'label': f'{num}', 'value': num} for num in shift_num_list]
 layout_list += [html.Div(id='shift_selector_label',
@@ -126,16 +129,14 @@ layout_list += [html.Div(id='shift_selector_label',
                               value=shift_num_list
                               )]
 
-
-# # app.layout = html.Div(layout_list)
-# app.layout = dbc.Container([dbc.Row([dbc.Col([comp], width=True)]) for comp in layout_list])
+# add everything to the layout
 app.layout = html.Div([dbc.Row([dbc.Col([comp], width=True)]) for comp in layout_list])
-# app.layout = dbc.Container([dbc.Row([dbc.Col(layout_list, width=True)])])
 
 hvr_template = '''%{hovertext} - %{customdata[total_len]m}'''.replace('total_len', str(df.columns.get_loc('display_length')))
 # hvr_template = '''%{x},%{y}'''
 
 
+# update the graph when selections change
 @app.callback(Output('graph', 'figure'),
               [Input('tc_picker', 'value'),
                Input('mark_size_form', 'value'),
