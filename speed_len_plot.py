@@ -30,6 +30,10 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_columns', None)
 pd.set_option('display.width', None)
 
+# show all the dataframe columns wider
+pd.options.display.max_columns = None
+pd.options.display.width = 0
+
 # load the data
 # df = pd.read_csv('https://github.com/Pierian-Data/Plotly-Dashboards-with-Dash/raw/master/Data/mpg.csv')
 # df = pd.read_excel(r'C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-05-23 percent of running speed length meeting target speed e097f566-e009-427d-8202-30ea065080ac.xlsx',
@@ -40,19 +44,27 @@ pd.set_option('display.width', None)
 # fp = r'C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-05-23 percent of running speed length meeting target speed e097f566-e009-427d-8202-30ea065080ac.csv'
 
 # increased speed parts, january to mid june
-fp = r"C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-06-12 percent of running speed length meeting target speed a1fb1449-115f-4315-9344-b30186160523.csv"
-df = pd.read_csv(fp)
+# fp = r"C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-06-12 percent of running speed length meeting target speed a1fb1449-115f-4315-9344-b30186160523.csv"
+fp = r"C:\my documents\nh_plots\test_refactoring\by_week\2021-06-23_15-47-05_plot_data.pickle"
+df = pd.read_pickle(fp)
+
+# for now, no shift is being provided, so we'll pretend it's 1st
+df['shift'] = [1]*len(df)
+if 'tabcode' not in df.columns:
+    df['tabcode'] = df['tcode']
+    df['coater_num'] = df['cnum']
+    df = df.drop(0)
 
 # df['total_len_tcs'] = df.groupby(['tabcode', 'coater_num', 'shift', 'week'])['total_length'].transform('sum')
 # make sure the data has things the way we want
-df = df[df['total_length'] > 0]  # no 0 length
-df = df.sort_values(['week'])  # ordered by length
-df['display_length'] = df['total_length'].round(2)
+# df = df[df['total_length'] > 0]  # no 0 length
+# df = df.sort_values(['week'])  # ordered by length
+# df['display_length'] = df['total_length'].round(2)
 
 features = df.columns
 
 # app = dash.Dash()
-css_sheet = dbc.themes.MATERIA
+# css_sheet = dbc.themes.MATERIA
 # app = dash.Dash(__name__, external_stylesheets=[css_sheet])  # this isn't working for me, needed a local copy
 app = dash.Dash(__name__,
                 meta_tags=[{'name': 'viewport',
@@ -136,8 +148,8 @@ layout_list += [html.Div(id='shift_selector_label',
 # add everything to the layout
 app.layout = html.Div(graph_list + [dbc.Col([dbc.Row([dbc.Col([comp], width=True)]) for comp in layout_list], width=4)])
 
-totl_len_str = str(df.columns.get_loc('display_length'))
-hvr_template = '''%{hovertext} - %{customdata[total_len]m}'''.replace('total_len', totl_len_str)
+# totl_len_str = str(df.columns.get_loc('display_length'))
+# hvr_template = '''%{hovertext} - %{customdata[total_len]m}'''.replace('total_len', totl_len_str)
 # hvr_template = '''%{x},%{y}'''
 
 
@@ -152,49 +164,51 @@ def update_figure(selected_tc, mark_size_multiplier, selected_coaters, selected_
     selected_coaters = tuple(int(n) for n in selected_coaters)
 
     # filter the data based on inputs
-    filtered_df = df[df['tabcode'] == int(selected_tc)]
+    filtered_df = df[df['tabcode'] == selected_tc]
+    print(f'rows in filtered_df {filtered_df}')
     filtered_df = filtered_df[filtered_df['coater_num'].isin(selected_coaters)]
     filtered_df = filtered_df[filtered_df['shift'].isin(selected_shifts)]
 
-    length_max = filtered_df['total_length'].max()
-    length_min = filtered_df['total_length'].min()
-    filtered_df['proportion'] = 1
-    proportion = (1 - ((length_max - filtered_df['total_length']) / length_max)) * int(mark_size_multiplier)
+    # length_max = filtered_df['total_length'].max()
+    # length_min = filtered_df['total_length'].min()
+    # filtered_df['proportion'] = 1
+    # proportion = (1 - ((length_max - filtered_df['total_length']) / length_max)) * int(mark_size_multiplier)
+    proportion = 1 * int(mark_size_multiplier)
 
     traces = []
     print(selected_tc)
 
     for grp_mi, grp_df in filtered_df.groupby(['coater_num', 'shift']):
-        for pct_targ in selected_pcts:
-            print(grp_mi)
+        # for pct_targ in selected_pcts:
+        print(grp_mi)
 
-            traces.append(go.Scatter(
-                x=grp_df['week'],
-                y=grp_df[pct_targ],
-                mode='lines+markers',
-                # mode='markers',
-                opacity=0.7,
-                # marker={'size': 15},
-                marker_size=proportion,
-                name='{tc}-{}-{}-{pct}'.format(*grp_mi, tc=selected_tc, pct=pct_targ),
-                # hovertemplate=hvr_template,
-                customdata=grp_df
-                # ,
-                # hover_data=['total_length']
-            ))
+        traces.append(go.Scatter(
+            x=tuple(x for x in grp_df['x_data'].iloc[0]),
+            y=tuple(y for y in grp_df['y_data'].iloc[0]),
+            mode='lines+markers',
+            # mode='markers',
+            opacity=0.7,
+            # marker={'size': 15},
+            marker_size=proportion,
+            name='{tc}-{}-{}'.format(*grp_mi, tc=selected_tc),
+            # hovertemplate=hvr_template,
+            customdata=grp_df
+            # ,
+            # hover_data=['total_length']
+        ))
 
-        return {'data': traces, 'layout': go.Layout(title='Achieving Target by Week Plot',
-                                                    xaxis={'title': 'Week of Year', 'type': 'linear'},
-                                                    yaxis={'title': 'Overall met target speed pct', 'type': 'linear'}
-                                                    # , template=shared_template
+    return {'data': traces, 'layout': go.Layout(title='Achieving Target by Week Plot',
+                                                xaxis={'title': 'Week of Year', 'type': 'linear'},
+                                                yaxis={'title': 'Overall met target speed pct', 'type': 'linear'}
+                                                # , template=shared_template
 
-                                                    # these together along with the darkly bootstrap-theme gives a good
-                                                    # dark theme graph
-                                                    , template='plotly_dark'
-                                                    , plot_bgcolor='rgba(0, 0, 0, 0)'
-                                                    , paper_bgcolor='rgba(0, 0, 0, 0)'
-                                                    )
-                }
+                                                # these together along with the darkly bootstrap-theme gives a good
+                                                # dark theme graph
+                                                # , template='plotly_dark'
+                                                # , plot_bgcolor='rgba(0, 0, 0, 0)'
+                                                # , paper_bgcolor='rgba(0, 0, 0, 0)'
+                                                )
+            }
 
 
 app.run_server()
