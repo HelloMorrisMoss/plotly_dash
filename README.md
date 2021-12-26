@@ -10,7 +10,7 @@ There were hundreds of graphs made during development and many more possible usi
 
 This graph shows the ratio of the product on that production line that was produced at different proportions of the target speed from 0.70 to 1.30 weekly over several months. The size of the circles represent the quantity produced during the week.
 
-![A line chart with many colorful lines showing the trends of production speeds over several months.](https://github.com/HelloMorrisMoss/diagrams_and_images/blob/main/target_by_week.png)
+![A line chart with many colorful lines showing the trends of production speeds over several months.](https://github.com/HelloMorrisMoss/diagrams_and_images/blob/main/speed_study_nh/target_by_week.png)
 
 These charts show the percentage and length of the product that was produced at speeds close to the target speed.
 * The first shows a part that the target speed was as intended challenging but achievable.
