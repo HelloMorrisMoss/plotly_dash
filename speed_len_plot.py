@@ -45,15 +45,19 @@ pd.options.display.width = 0
 
 # increased speed parts, january to mid june
 # fp = r"C:\my documents\nh_plots\working_on_stats\2021-01-03 to 2021-06-12 percent of running speed length meeting target speed a1fb1449-115f-4315-9344-b30186160523.csv"
-fp = r"C:\my documents\nh_plots\test_refactoring\by_week\2021-06-23_15-47-05_plot_data.pickle"
+# fp = r"C:\my documents\nh_plots\test_refactoring\by_week\2021-06-23_15-47-05_plot_data.pickle"
+# fp = r"C:\my documents\nh_plots\test_refactoring\by_week\2021-06-23_16-40-06_plot_data.pickle"
+fp = r"C:\my documents\nh_plots\test_refactoring\by_week\2021-06-25_17-06-09_plot_data.pickle"
 df = pd.read_pickle(fp)
 
 # for now, no shift is being provided, so we'll pretend it's 1st
 df['shift'] = [1]*len(df)
-if 'tabcode' not in df.columns:
-    df['tabcode'] = df['tcode']
-    df['coater_num'] = df['cnum']
-    df = df.drop(0)
+if 'week' not in df.columns:
+    df['week'] = df['end'].apply(lambda x: x.isocalendar()[1])
+# if 'tabcode' not in df.columns:
+#     df['tabcode'] = df['tcode']
+#     df['coater_num'] = df['cnum']
+#     df = df.drop(0)
 
 # df['total_len_tcs'] = df.groupby(['tabcode', 'coater_num', 'shift', 'week'])['total_length'].transform('sum')
 # make sure the data has things the way we want
@@ -85,7 +89,7 @@ graph_list = [dcc.Graph(id='graph')]
 
 # the met target speed % checklist
 def just_ints(the_string):
-    """Returns ony the digits from a string as an """
+    """Returns only the digits from a string as an integer."""
     # print(the_string)
     int_str_list = [character for character in the_string if character.isdigit()]
     # print(int_str_list)
@@ -93,14 +97,18 @@ def just_ints(the_string):
     return ret_val
 
 
-targ_pct_list = tuple(hdr for hdr in df.columns if '_of_targ' in hdr)
-targ_pct_checklist_list = [{'label': just_ints(targ), 'value': targ} for targ in targ_pct_list]
-layout_list += [html.Div(id='pct_selector_label',
-                         title='Select percentage met traces to display.',
-                         children='Select percentage met traces to display.'), ]
-layout_list += [dcc.Checklist(id='pct_selector_checklist',
-                              options=targ_pct_checklist_list,
-                              value=targ_pct_list
+# tabcode to start out on 
+default_tc = df['tabcode'].astype(str).min()
+
+# generate a checkbox list for weeks
+weeks_list = tuple(wk for wk in df['week'].unique())
+week_checklist_list = [{'label': wk_num, 'value': wk_num} for wk_num in weeks_list]
+layout_list += [html.Div(id='week_select_label',
+                         title='Select weeks to display.',
+                         children='Select weeks to display.'), ]
+layout_list += [dcc.Checklist(id='week_selector_checklist',
+                              options=week_checklist_list,
+                              value=weeks_list
                               ), ]
 
 # the label for and dropdown for tabcode
@@ -108,11 +116,12 @@ tc_options = []
 for tc in df['tabcode'].unique():
     tc_options.append({'label': str(tc), 'value': tc})
 
+
 layout_list += [html.Div(id='tc_label', title='Select a Tabcode to display from the dropdown menu.',
                          children='Tabcode'),
                 dcc.Dropdown(id='tc_picker',
                              options=tc_options,
-                             value=df['tabcode'].min(),
+                             value=default_tc,
                              )]
 
 # the label for and the input box for bubble marker size
@@ -159,8 +168,8 @@ app.layout = html.Div(graph_list + [dbc.Col([dbc.Row([dbc.Col([comp], width=True
                Input('mark_size_form', 'value'),
                Input('coater_selector_checklist', 'value'),
                Input('shift_selector_checklist', 'value'),
-               Input('pct_selector_checklist', 'value')])
-def update_figure(selected_tc, mark_size_multiplier, selected_coaters, selected_shifts, selected_pcts):
+               Input('week_selector_checklist', 'value')])
+def update_figure(selected_tc, mark_size_multiplier, selected_coaters, selected_shifts, selected_weeks):
     selected_coaters = tuple(int(n) for n in selected_coaters)
 
     # filter the data based on inputs
@@ -168,6 +177,7 @@ def update_figure(selected_tc, mark_size_multiplier, selected_coaters, selected_
     print(f'rows in filtered_df {filtered_df}')
     filtered_df = filtered_df[filtered_df['coater_num'].isin(selected_coaters)]
     filtered_df = filtered_df[filtered_df['shift'].isin(selected_shifts)]
+    filtered_df = filtered_df[filtered_df['week'].isin(selected_weeks)]
 
     # length_max = filtered_df['total_length'].max()
     # length_min = filtered_df['total_length'].min()
@@ -179,9 +189,10 @@ def update_figure(selected_tc, mark_size_multiplier, selected_coaters, selected_
     print(selected_tc)
 
     for grp_mi, grp_df in filtered_df.groupby(['coater_num', 'shift']):
-        # for pct_targ in selected_pcts:
+        # for pct_targ in selected_weeks:
         print(grp_mi)
 
+        this_week = grp_df['week'].iloc[0]
         traces.append(go.Scatter(
             x=tuple(x for x in grp_df['x_data'].iloc[0]),
             y=tuple(y for y in grp_df['y_data'].iloc[0]),
@@ -190,16 +201,16 @@ def update_figure(selected_tc, mark_size_multiplier, selected_coaters, selected_
             opacity=0.7,
             # marker={'size': 15},
             marker_size=proportion,
-            name='{tc}-{}-{}'.format(*grp_mi, tc=selected_tc),
+            name='{tc}-{}-{}-{wk}'.format(*grp_mi, tc=selected_tc, wk=this_week),
             # hovertemplate=hvr_template,
             customdata=grp_df
             # ,
             # hover_data=['total_length']
         ))
 
-    return {'data': traces, 'layout': go.Layout(title='Achieving Target by Week Plot',
-                                                xaxis={'title': 'Week of Year', 'type': 'linear'},
-                                                yaxis={'title': 'Overall met target speed pct', 'type': 'linear'}
+    return {'data': traces, 'layout': go.Layout(title='Percentage of time on part at speeds.',
+                                                xaxis={'title': 'Speed m/min', 'type': 'linear'},
+                                                yaxis={'title': 'Percentage of time on part', 'type': 'linear'}
                                                 # , template=shared_template
 
                                                 # these together along with the darkly bootstrap-theme gives a good
